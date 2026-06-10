@@ -2,70 +2,176 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Technician Dashboard</title>
+  <title>Plush Intentions — Technician Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <!-- Mapbox CSS -->
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
 
-  <style>
-    body { margin: 0; background: #0b0e14; color: #fff; font-family: system-ui, sans-serif; }
-    nav { display: flex; justify-content: space-around; background: #111827; padding: 12px; border-bottom: 1px solid #1f2937; position: sticky; top: 0; z-index: 10; }
-    nav button { background: none; border: none; color: #9ca3af; font-size: 1rem; padding: 8px 12px; cursor: pointer; }
-    nav button.active { color: #3b82f6; border-bottom: 2px solid #3b82f6; }
-    .page { display: none; padding: 16px; }
-    .page.active { display: block; }
-    .job-card { background: #1f2937; padding: 12px; border-radius: 8px; margin-bottom: 12px; }
-    .earnings-box { background: #1f2937; padding: 16px; border-radius: 12px; margin-bottom: 16px; }
-    .earnings-value { font-size: 2rem; font-weight: bold; color: #3b82f6; }
-    #mapbox { width: 100%; height: 70vh; border-radius: 12px; margin-top: 12px; }
-  </style>
+  <!-- Technician Dashboard CSS -->
+  <link rel="stylesheet" href="/technician-dashboard.css" />
 </head>
-
 <body>
 
-  <nav>
-    <button onclick="showPage('dashboard')" id="nav-dashboard" class="active">Dashboard</button>
-    <button onclick="showPage('assigned')" id="nav-assigned">Assigned</button>
-    <button onclick="showPage('available')" id="nav-available">Available</button>
-    <button onclick="showPage('earnings')" id="nav-earnings">Earnings</button>
-    <button onclick="showPage('map')" id="nav-map">Map</button>
-  </nav>
-
-  <div id="dashboard" class="page active">
-    <h2>Welcome Technician</h2>
-    <p>Your live job updates will appear here.</p>
+  <!-- LOADER (optional, can hook later) -->
+  <div id="loader" class="glass hidden">
+    <img src="/logo.html" alt="Plush Intentions" class="loader-logo">
+    <div class="loader-text">Loading Technician Portal</div>
   </div>
 
-  <div id="assigned" class="page">
-    <h2>Assigned Jobs</h2>
-    <div id="assignedJobs"></div>
+  <!-- TOAST -->
+  <div id="toast"></div>
+
+  <!-- SIDEBAR BACKDROP (mobile) -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar glass" id="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <img src="/logo.html" alt="Plush Intentions">
+        <div>
+          <div class="brand-title">Plush Intentions</div>
+          <div class="brand-sub">Technician Portal</div>
+        </div>
+      </div>
+      <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close sidebar">
+        ✕
+      </button>
+    </div>
+
+    <div class="sidebar-stats">
+      <div class="ss-card pink">
+        <div class="val" id="statAssigned">0</div>
+        <div class="lbl">Assigned</div>
+      </div>
+      <div class="ss-card blue">
+        <div class="val" id="statAvailable">0</div>
+        <div class="lbl">Available</div>
+      </div>
+    </div>
+
+    <div class="nav-section">Navigation</div>
+
+    <div class="nav-link active" data-panel="panel-dashboard">
+      <span>Dashboard</span>
+    </div>
+    <div class="nav-link" data-panel="panel-assigned">
+      <span>Assigned Jobs</span>
+      <span class="nav-badge" id="badgeAssigned"></span>
+    </div>
+    <div class="nav-link" data-panel="panel-available">
+      <span>Available Jobs</span>
+      <span class="nav-badge" id="badgeAvailable"></span>
+    </div>
+    <div class="nav-link" data-panel="panel-earnings">
+      <span>Earnings</span>
+    </div>
+    <div class="nav-link" data-panel="panel-map">
+      <span>Map</span>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="signed-in-email" id="signedInEmail"></div>
+      <button class="btn-signout" id="btnSignOut">
+        <span>Sign Out</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <div class="main-area">
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <button class="hamburger" id="sidebarOpenBtn" aria-label="Open sidebar">
+        ☰
+      </button>
+      <div class="topbar-title" id="topbarTitle">Dashboard</div>
+      <button class="topbar-refresh" id="btnRefresh" aria-label="Refresh">
+        ⟳
+      </button>
+    </header>
+
+    <!-- MOBILE STATS BAR -->
+    <div class="mobile-stats-bar">
+      <div class="msb-card">
+        <div class="msb-val" id="msbAssigned">0</div>
+        <div class="msb-lbl">Assigned</div>
+      </div>
+      <div class="msb-card">
+        <div class="msb-val" id="msbAvailable">0</div>
+        <div class="msb-lbl">Available</div>
+      </div>
+    </div>
+
+    <!-- PANELS -->
+    <main class="panel active" id="panel-dashboard">
+      <div class="panel-header">
+        <h2>Welcome Technician</h2>
+      </div>
+      <p class="section-heading">Overview</p>
+      <div class="earnings-summary">
+        <div class="earn-card pink">
+          <div class="earn-val" id="dashToday">$0.00</div>
+          <div class="earn-lbl">Today</div>
+        </div>
+        <div class="earn-card blue">
+          <div class="earn-val" id="dashWeek">$0.00</div>
+          <div class="earn-lbl">This Week</div>
+        </div>
+        <div class="earn-card green">
+          <div class="earn-val" id="dashMonth">$0.00</div>
+          <div class="earn-lbl">This Month</div>
+        </div>
+      </div>
+    </main>
+
+    <main class="panel" id="panel-assigned">
+      <div class="panel-header">
+        <h2>Assigned Jobs</h2>
+      </div>
+      <div class="card-grid" id="assignedJobsGrid"></div>
+    </main>
+
+    <main class="panel" id="panel-available">
+      <div class="panel-header">
+        <h2>Available Jobs</h2>
+      </div>
+      <div class="card-grid" id="availableJobsGrid"></div>
+    </main>
+
+    <main class="panel" id="panel-earnings">
+      <div class="panel-header">
+        <h2>Earnings</h2>
+      </div>
+      <div class="earnings-summary">
+        <div class="earn-card pink">
+          <div class="earn-val" id="earnToday">$0.00</div>
+          <div class="earn-lbl">Today</div>
+        </div>
+        <div class="earn-card blue">
+          <div class="earn-val" id="earnWeek">$0.00</div>
+          <div class="earn-lbl">This Week</div>
+        </div>
+        <div class="earn-card green">
+          <div class="earn-val" id="earnMonth">$0.00</div>
+          <div class="earn-lbl">This Month</div>
+        </div>
+      </div>
+    </main>
+
+    <main class="panel" id="panel-map">
+      <div id="map-container">
+        <div id="mapbox"></div>
+      </div>
+    </main>
   </div>
 
-  <div id="available" class="page">
-    <h2>Available Jobs</h2>
-    <div id="unassignedJobs"></div>
-  </div>
-
-  <div id="earnings" class="page">
-    <h2>Your Earnings</h2>
-    <div class="earnings-box"><p>Today</p><div class="earnings-value" id="earningsToday">$0.00</div></div>
-    <div class="earnings-box"><p>This Week</p><div class="earnings-value" id="earningsWeek">$0.00</div></div>
-    <div class="earnings-box"><p>This Month</p><div class="earnings-value" id="earningsMonth">$0.00</div></div>
-  </div>
-
-  <div id="map" class="page">
-    <h2>Technician Map</h2>
-    <div id="mapbox"></div>
-  </div>
-
-  <!-- LOAD SUPABASE v2 FIRST -->
+  <!-- Supabase v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- MAPBOX -->
+  <!-- Mapbox JS -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-
-  <!-- TECH DASHBOARD LOGIC -->
-  <script src="/tech-dashboard.js"></script>
-
+  <!-- Technician Dashboard Logic -->
+  <script src="/technician-dashboard.js"></script>
 </body>
 </html>
