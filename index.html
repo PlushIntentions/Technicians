@@ -211,7 +211,7 @@ const ROLE_LABELS = {
   workorders_coordinator: 'WORK ORDERS ACCESS'
 };
 
-let selectedRole = 'admin';
+let selectedRole = 'technician';
 let sb;
 
 window.addEventListener('load', () => {
@@ -281,7 +281,7 @@ async function doLogin() {
     return;
   }
 
-  window.location.href = ROLE_ROUTES[dbRole] || '/admin-portal.html';
+  window.location.href = ROLE_ROUTES[dbRole] || '/technician-dashboard.html';
 }
 
 function redirectByRole(user) {
