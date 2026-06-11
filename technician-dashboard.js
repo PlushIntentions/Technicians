@@ -1,4 +1,3 @@
-
 // Supabase client (v2)
 const supabase = window.supabase.createClient(
   "https://iazvpykfdckpffhakncd.supabase.co",
@@ -8,7 +7,7 @@ const supabase = window.supabase.createClient(
 let TECH_ID = null;
 let mapInstance = null;
 
-// UI helpers
+// Toast
 function showToast(msg, ms = 2500) {
   const toast = document.getElementById("toast");
   toast.textContent = msg;
@@ -16,14 +15,14 @@ function showToast(msg, ms = 2500) {
   setTimeout(() => toast.classList.remove("show"), ms);
 }
 
+// Loader
 function setLoaderVisible(visible) {
   const loader = document.getElementById("loader");
   if (!loader) return;
-  if (visible) loader.classList.remove("hidden");
-  else loader.classList.add("hidden");
+  visible ? loader.classList.remove("hidden") : loader.classList.add("hidden");
 }
 
-// Sidebar logic
+// Sidebar
 function setupSidebar() {
   const sidebar = document.getElementById("sidebar");
   const backdrop = document.getElementById("sidebarBackdrop");
@@ -44,26 +43,35 @@ function setupSidebar() {
   backdrop?.addEventListener("click", close);
 }
 
-// Panel switching
+// Panel switching (FIXED)
 function setupPanels() {
   const links = document.querySelectorAll(".nav-link");
   const panels = document.querySelectorAll(".panel");
   const titleEl = document.getElementById("topbarTitle");
+  const sidebar = document.getElementById("sidebar");
+  const backdrop = document.getElementById("sidebarBackdrop");
 
   links.forEach(link => {
     link.addEventListener("click", () => {
       const panelId = link.getAttribute("data-panel");
       if (!panelId) return;
 
+      // Switch nav active
       links.forEach(l => l.classList.remove("active"));
       link.classList.add("active");
 
+      // Switch panel active
       panels.forEach(p => p.classList.remove("active"));
       document.getElementById(panelId)?.classList.add("active");
 
-      const label = link.textContent.trim();
-      if (titleEl) titleEl.textContent = label;
+      // Update topbar title
+      titleEl.textContent = link.textContent.trim();
 
+      // Close sidebar on mobile AFTER switching
+      sidebar.classList.remove("open");
+      backdrop.classList.remove("show");
+
+      // Load map only when needed
       if (panelId === "panel-map") initMap();
     });
   });
@@ -72,8 +80,6 @@ function setupPanels() {
 // Mapbox
 function initMap() {
   if (mapInstance) return;
-  const container = document.getElementById("mapbox");
-  if (!container) return;
 
   mapboxgl.accessToken = "pk.eyJ1IjoicGx1c2gtaW50ZW50aW9ucyIsImEiOiJjbXA5ejJlcGwwMzQxMnJwdXBpZTg5NmYxIn0.i0wFsO5_bt70k942AsMNcg";
 
@@ -85,56 +91,43 @@ function initMap() {
   });
 }
 
-// Data loading
+// Load user
 async function loadUser() {
   const { data, error } = await supabase.auth.getUser();
-  if (error) {
-    console.error(error);
-    showToast("Auth error");
-    return null;
-  }
+  if (error) return null;
   return data.user;
 }
 
+// Load assigned jobs
 async function loadAssignedJobs() {
   if (!TECH_ID) return;
+
   const { data, error } = await supabase
     .from("jobs")
     .select("*")
     .eq("assigned_to", TECH_ID)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error(error);
-    showToast("Error loading assigned jobs");
-    return;
-  }
-
   const grid = document.getElementById("assignedJobsGrid");
   grid.innerHTML = "";
 
-  if (!data || data.length === 0) {
+  if (error || !data || data.length === 0) {
     grid.innerHTML = `<div class="empty-state"><p>No assigned jobs.</p></div>`;
   } else {
-    data.forEach(job => {
-      grid.appendChild(renderJobCard(job, true));
-    });
+    data.forEach(job => grid.appendChild(renderJobCard(job, true)));
   }
 
   const count = data?.length || 0;
   document.getElementById("statAssigned").textContent = count;
   document.getElementById("msbAssigned").textContent = count;
+
   const badge = document.getElementById("badgeAssigned");
   if (badge) {
-    if (count > 0) {
-      badge.textContent = count;
-      badge.classList.add("show");
-    } else {
-      badge.classList.remove("show");
-    }
+    count > 0 ? (badge.textContent = count, badge.classList.add("show")) : badge.classList.remove("show");
   }
 }
 
+// Load available jobs
 async function loadAvailableJobs() {
   const { data, error } = await supabase
     .from("jobs")
@@ -142,37 +135,26 @@ async function loadAvailableJobs() {
     .is("assigned_to", null)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error(error);
-    showToast("Error loading available jobs");
-    return;
-  }
-
   const grid = document.getElementById("availableJobsGrid");
   grid.innerHTML = "";
 
-  if (!data || data.length === 0) {
+  if (error || !data || data.length === 0) {
     grid.innerHTML = `<div class="empty-state"><p>No available jobs.</p></div>`;
   } else {
-    data.forEach(job => {
-      grid.appendChild(renderJobCard(job, false));
-    });
+    data.forEach(job => grid.appendChild(renderJobCard(job, false)));
   }
 
   const count = data?.length || 0;
   document.getElementById("statAvailable").textContent = count;
   document.getElementById("msbAvailable").textContent = count;
+
   const badge = document.getElementById("badgeAvailable");
   if (badge) {
-    if (count > 0) {
-      badge.textContent = count;
-      badge.classList.add("show");
-    } else {
-      badge.classList.remove("show");
-    }
+    count > 0 ? (badge.textContent = count, badge.classList.add("show")) : badge.classList.remove("show");
   }
 }
 
+// Render job card
 function renderJobCard(job, isAssigned) {
   const card = document.createElement("div");
   card.className = "card";
@@ -190,12 +172,14 @@ function renderJobCard(job, isAssigned) {
       </div>
       <span class="badge ${statusClass}">${(job.status || "").replace("_", " ")}</span>
     </div>
+
     <div class="card-body">
       <span>${job.description || ""}</span>
       <span>${job.address || ""}</span>
       <span>${job.scheduled_time ? new Date(job.scheduled_time).toLocaleString() : ""}</span>
       <span>${job.price ? "$" + job.price.toFixed(2) : ""}</span>
     </div>
+
     <div class="card-actions"></div>
   `;
 
@@ -203,32 +187,32 @@ function renderJobCard(job, isAssigned) {
 
   if (isAssigned) {
     if (job.status === "assigned") {
-      const btnCheckIn = document.createElement("button");
-      btnCheckIn.className = "btn-sm btn-success";
-      btnCheckIn.textContent = "Check In";
-      btnCheckIn.onclick = () => checkIn(job.id);
-      actions.appendChild(btnCheckIn);
+      const btn = document.createElement("button");
+      btn.className = "btn-sm btn-success";
+      btn.textContent = "Check In";
+      btn.onclick = () => checkIn(job.id);
+      actions.appendChild(btn);
     }
     if (job.status === "in_progress") {
-      const btnComplete = document.createElement("button");
-      btnComplete.className = "btn-sm btn-primary";
-      btnComplete.textContent = "Complete";
-      btnComplete.onclick = () => completeJob(job.id);
-      actions.appendChild(btnComplete);
+      const btn = document.createElement("button");
+      btn.className = "btn-sm btn-primary";
+      btn.textContent = "Complete";
+      btn.onclick = () => completeJob(job.id);
+      actions.appendChild(btn);
     }
   } else {
-    const btnAccept = document.createElement("button");
-    btnAccept.className = "btn-sm btn-success";
-    btnAccept.textContent = "Accept";
-    btnAccept.onclick = () => acceptJob(job.id);
+    const accept = document.createElement("button");
+    accept.className = "btn-sm btn-success";
+    accept.textContent = "Accept";
+    accept.onclick = () => acceptJob(job.id);
 
-    const btnDecline = document.createElement("button");
-    btnDecline.className = "btn-sm btn-outline";
-    btnDecline.textContent = "Decline";
-    btnDecline.onclick = () => declineJob(job.id);
+    const decline = document.createElement("button");
+    decline.className = "btn-sm btn-outline";
+    decline.textContent = "Decline";
+    decline.onclick = () => declineJob(job.id);
 
-    actions.appendChild(btnAccept);
-    actions.appendChild(btnDecline);
+    actions.appendChild(accept);
+    actions.appendChild(decline);
   }
 
   return card;
@@ -237,16 +221,11 @@ function renderJobCard(job, isAssigned) {
 // Job actions
 async function acceptJob(jobId) {
   if (!TECH_ID) return;
-  const { error } = await supabase
-    .from("jobs")
-    .update({ assigned_to: TECH_ID, status: "assigned" })
-    .eq("id", jobId);
 
-  if (error) {
-    console.error(error);
-    showToast("Error accepting job");
-    return;
-  }
+  await supabase.from("jobs").update({
+    assigned_to: TECH_ID,
+    status: "assigned"
+  }).eq("id", jobId);
 
   await supabase.from("job_requests").insert({
     job_id: jobId,
@@ -260,53 +239,31 @@ async function acceptJob(jobId) {
 
 async function declineJob(jobId) {
   if (!TECH_ID) return;
-  const { error } = await supabase
-    .from("job_declines")
-    .insert({ job_id: jobId, technician_id: TECH_ID });
 
-  if (error) {
-    console.error(error);
-    showToast("Error declining job");
-    return;
-  }
+  await supabase.from("job_declines").insert({
+    job_id: jobId,
+    technician_id: TECH_ID
+  });
 
   showToast("Job declined");
   loadAvailableJobs();
 }
 
 async function checkIn(jobId) {
-  const { error } = await supabase
-    .from("jobs")
-    .update({
-      status: "in_progress",
-      check_in_time: new Date().toISOString()
-    })
-    .eq("id", jobId);
-
-  if (error) {
-    console.error(error);
-    showToast("Error checking in");
-    return;
-  }
+  await supabase.from("jobs").update({
+    status: "in_progress",
+    check_in_time: new Date().toISOString()
+  }).eq("id", jobId);
 
   showToast("Checked in");
   loadAssignedJobs();
 }
 
 async function completeJob(jobId) {
-  const { error } = await supabase
-    .from("jobs")
-    .update({
-      status: "completed",
-      completed_time: new Date().toISOString()
-    })
-    .eq("id", jobId);
-
-  if (error) {
-    console.error(error);
-    showToast("Error completing job");
-    return;
-  }
+  await supabase.from("jobs").update({
+    status: "completed",
+    completed_time: new Date().toISOString()
+  }).eq("id", jobId);
 
   showToast("Job completed");
   loadAssignedJobs();
@@ -316,17 +273,12 @@ async function completeJob(jobId) {
 // Earnings
 async function loadEarnings() {
   if (!TECH_ID) return;
-  const { data, error } = await supabase
+
+  const { data } = await supabase
     .from("jobs")
     .select("price, completed_time")
     .eq("assigned_to", TECH_ID)
     .eq("status", "completed");
-
-  if (error) {
-    console.error(error);
-    showToast("Error loading earnings");
-    return;
-  }
 
   let today = 0, week = 0, month = 0;
   const now = new Date();
@@ -334,13 +286,12 @@ async function loadEarnings() {
 
   (data || []).forEach(job => {
     if (!job.price || !job.completed_time) return;
+
     const completed = new Date(job.completed_time);
 
     if (completed.toDateString() === now.toDateString()) today += job.price;
     if (completed >= weekAgo) week += job.price;
-    if (completed.getMonth() === now.getMonth() && completed.getFullYear() === now.getFullYear()) {
-      month += job.price;
-    }
+    if (completed.getMonth() === now.getMonth()) month += job.price;
   });
 
   const fmt = v => "$" + v.toFixed(2);
@@ -368,17 +319,15 @@ function subscribeJobs() {
 
 // Sign out
 function setupSignOut() {
-  const btn = document.getElementById("btnSignOut");
-  btn?.addEventListener("click", async () => {
+  document.getElementById("btnSignOut")?.addEventListener("click", async () => {
     await supabase.auth.signOut();
     window.location.href = "/login.html";
   });
 }
 
-// Refresh button
+// Refresh
 function setupRefresh() {
-  const btn = document.getElementById("btnRefresh");
-  btn?.addEventListener("click", () => {
+  document.getElementById("btnRefresh")?.addEventListener("click", () => {
     loadAssignedJobs();
     loadAvailableJobs();
     loadEarnings();
@@ -403,8 +352,7 @@ async function boot() {
   }
 
   TECH_ID = user.id;
-  const emailEl = document.getElementById("signedInEmail");
-  if (emailEl) emailEl.textContent = user.email || "";
+  document.getElementById("signedInEmail").textContent = user.email || "";
 
   await Promise.all([
     loadAssignedJobs(),
@@ -415,31 +363,5 @@ async function boot() {
   subscribeJobs();
   setLoaderVisible(false);
 }
-
-links.forEach(link => {
-  link.addEventListener("click", () => {
-    const panelId = link.getAttribute("data-panel");
-    if (!panelId) return;
-
-    // Switch active nav link
-    links.forEach(l => l.classList.remove("active"));
-    link.classList.add("active");
-
-    // Switch active panel
-    panels.forEach(p => p.classList.remove("active"));
-    document.getElementById(panelId)?.classList.add("active");
-
-    // Update topbar title
-    titleEl.textContent = link.textContent.trim();
-
-    // Close sidebar on mobile
-    sidebar.classList.remove("open");
-    backdrop.classList.remove("show");
-
-    // Load map if needed
-    if (panelId === "panel-map") initMap();
-  });
-});
-
 
 document.addEventListener("DOMContentLoaded", boot);
