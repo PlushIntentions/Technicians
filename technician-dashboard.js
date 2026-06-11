@@ -1,7 +1,7 @@
 // Supabase client (v2)
 
   <!-- Supabase v2 -->
- import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
 
 const supabase = window.supabase.createClient(
   "https://iazvpykfdckpffhakncd.supabase.co",
