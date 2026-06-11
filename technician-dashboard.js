@@ -416,4 +416,30 @@ async function boot() {
   setLoaderVisible(false);
 }
 
+links.forEach(link => {
+  link.addEventListener("click", () => {
+    const panelId = link.getAttribute("data-panel");
+    if (!panelId) return;
+
+    // Switch active nav link
+    links.forEach(l => l.classList.remove("active"));
+    link.classList.add("active");
+
+    // Switch active panel
+    panels.forEach(p => p.classList.remove("active"));
+    document.getElementById(panelId)?.classList.add("active");
+
+    // Update topbar title
+    titleEl.textContent = link.textContent.trim();
+
+    // Close sidebar on mobile
+    sidebar.classList.remove("open");
+    backdrop.classList.remove("show");
+
+    // Load map if needed
+    if (panelId === "panel-map") initMap();
+  });
+});
+
+
 document.addEventListener("DOMContentLoaded", boot);
